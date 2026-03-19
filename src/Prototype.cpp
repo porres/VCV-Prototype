@@ -286,8 +286,12 @@ struct Prototype : Module {
 		if (this->script == "")
 			return;
 
-		// Watch file
-		std::string dir = string::directory(path);
+// Watch file
+        // Old V1 code that causes  error
+//        std::string dir = string::directory(path);
+        // Correct V2 code, verified by the official API documentation
+        std::string dir = rack::system::getDirectory(path);
+        
 //		efsw = efsw_create(false);
 //		efsw_addwatch(efsw, dir.c_str(), watchCallback, false, this);
 //		efsw_watch(efsw);
@@ -331,7 +335,8 @@ struct Prototype : Module {
 		this->script = script;
 
 		// Create script engine from path extension
-		std::string extension = string::filenameExtension(string::filename(path));
+//		std::string extension = string::filenameExtension(string::filename(path)); old V1
+        std::string extension = system::getExtension(system::getFilename(path));
 		scriptEngine = createScriptEngine(extension);
 		if (!scriptEngine) {
 			message = string::f("No engine for .%s extension", extension.c_str());
@@ -409,7 +414,8 @@ struct Prototype : Module {
 		std::string ext = "js";
 		// Get current extension if a script is currently loaded
 		if (!path.empty()) {
-			ext = string::filenameExtension(string::filename(path));
+//			ext = string::filenameExtension(string::filename(path));
+            ext = system::getExtension(system::getFilename(path));
 		}
 		std::string dir = asset::plugin(pluginInstance, "examples");
 		std::string filename = "Untitled." + ext;
@@ -424,7 +430,8 @@ struct Prototype : Module {
 		setPath("");
 
 		// Get extension of requested filename
-		ext = string::filenameExtension(string::filename(newPath));
+//		ext = string::filenameExtension(string::filename(newPath));
+        ext = system::getExtension(system::getFilename(newPath));
 		if (ext == "") {
 			message = "File extension required";
 			return;
@@ -466,7 +473,8 @@ struct Prototype : Module {
 		if (script == "")
 			return;
 
-		std::string ext = string::filenameExtension(string::filename(path));
+//		std::string ext = string::filenameExtension(string::filename(path));
+        std::string ext = system::getExtension(system::getFilename(path));
 		std::string dir = asset::plugin(pluginInstance, "examples");
 		std::string filename = "Untitled." + ext;
 		char* newPathC = osdialog_file(OSDIALOG_SAVE, dir.c_str(), filename.c_str(), NULL);
@@ -476,7 +484,8 @@ struct Prototype : Module {
 		std::string newPath = newPathC;
 		std::free(newPathC);
 		// Add extension if user didn't specify one
-		std::string newExt = string::filenameExtension(string::filename(newPath));
+//		std::string newExt = string::filenameExtension(string::filename(newPath));
+        std::string newExt = system::getExtension(system::getFilename(newPath));
 		if (newExt == "")
 			newPath += "." + ext;
 
@@ -594,7 +603,8 @@ struct Prototype : Module {
 		if (path == "")
 			return "";
 		// HACK check if extension is .pd
-		if (string::filenameExtension(string::filename(path)) == "pd")
+//		if (string::filenameExtension(string::filename(path)) == "pd")
+        if (system::getExtension(system::getFilename(path)) == "pd")
 			return settingsPdEditorPath;
 		return settingsEditorPath;
 	}
@@ -624,8 +634,10 @@ struct FileChoice : LedDisplayChoice {
 		else
 			text = "Script";
 		text += ": ";
-		if (module && module->path != "")
-			text += string::filename(module->path);
+        if (module && module->path != ""){
+//			text += string::filename(module->path);
+            text += system::getFilename(module->path);
+        }
 		else
 			text += "(click to load)";
 	}
@@ -644,7 +656,7 @@ struct MessageChoice : LedDisplayChoice {
 		text = module ? module->message : "";
 	}
 
-	void draw(const DrawArgs& args) override {
+/*	void draw(const DrawArgs& args) override {
 		nvgScissor(args.vg, RECT_ARGS(args.clipBox));
 		if (font->handle >= 0) {
 			nvgFillColor(args.vg, color);
@@ -656,8 +668,24 @@ struct MessageChoice : LedDisplayChoice {
 			nvgTextBox(args.vg, textOffset.x, textOffset.y, box.size.x - textOffset.x, text.c_str(), NULL);
 		}
 		nvgResetScissor(args.vg);
-	}
+	}*/
 
+    void draw(const DrawArgs& args) override {
+        nvgScissor(args.vg, RECT_ARGS(args.clipBox));
+        // Load font - in V2, fonts are loaded from the system
+        std::shared_ptr<Font> font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
+        if (font) {
+            nvgFillColor(args.vg, color);
+            nvgFontFaceId(args.vg, font->handle);
+            nvgTextLetterSpacing(args.vg, 0.0);
+            nvgTextLineHeight(args.vg, 1.08);
+            nvgFontSize(args.vg, 12);
+            nvgTextBox(args.vg, textOffset.x, textOffset.y, box.size.x - textOffset.x, text.c_str(), NULL);
+        }
+        nvgResetScissor(args.vg);
+    }
+    
+    
 	void onAction(const event::Action& e) override {
 		Menu* menu = createMenu();
 
