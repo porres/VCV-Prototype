@@ -9,6 +9,8 @@
 
 ## Build dependencies
 
+export RACK_DIR=../Rack-SDK
+
 Set up your build environment like described here, including the dependencies: https://vcvrack.com/manual/Building
 
 Additionally:

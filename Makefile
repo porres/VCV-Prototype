@@ -32,7 +32,7 @@ endif
 
 $(libpd):
 	cd dep && git clone "https://github.com/libpd/libpd.git" --recursive
-	cd dep/libpd && git checkout 5772a612527f06597d44d195843307ad0e3578fe
+	cd dep/libpd && git checkout tags/0.15.0
 	
 ifdef ARCH_MAC
 	# libpd's Makefile is handmade, and it doesn't honor CFLAGS and LDFLAGS environments.

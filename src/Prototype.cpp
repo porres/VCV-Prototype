@@ -6,7 +6,7 @@
 #include <thread>
 #include <mutex>
 #include "ScriptEngine.hpp"
-#include <efsw/efsw.h>
+//#include <efsw/efsw.h>
 #if defined ARCH_WIN
 	#include <windows.h>
 #endif
@@ -158,7 +158,7 @@ struct Prototype : Module {
 	ProcessBlock* block;
 	int bufferIndex = 0;
 
-	efsw_watcher efsw = NULL;
+//	efsw_watcher efsw = NULL;
 
 	/** Script that has not yet been approved to load */
 	std::string unsecureScript;
@@ -270,10 +270,10 @@ struct Prototype : Module {
 
 	void setPath(std::string path) {
 		// Cleanup
-		if (efsw) {
+/*		if (efsw) {
 			efsw_release(efsw);
 			efsw = NULL;
-		}
+		}*/
 		this->path = "";
 		setScript("");
 
@@ -288,9 +288,9 @@ struct Prototype : Module {
 
 		// Watch file
 		std::string dir = string::directory(path);
-		efsw = efsw_create(false);
-		efsw_addwatch(efsw, dir.c_str(), watchCallback, false, this);
-		efsw_watch(efsw);
+//		efsw = efsw_create(false);
+//		efsw_addwatch(efsw, dir.c_str(), watchCallback, false, this);
+//		efsw_watch(efsw);
 	}
 
 	void loadPath() {
@@ -349,7 +349,7 @@ struct Prototype : Module {
 		this->engineName = scriptEngine->getEngineName();
 	}
 
-	static void watchCallback(efsw_watcher watcher, efsw_watchid watchid, const char* dir, const char* filename, enum efsw_action action, const char* old_filename, void* param) {
+/*	static void watchCallback(efsw_watcher watcher, efsw_watchid watchid, const char* dir, const char* filename, enum efsw_action action, const char* old_filename, void* param) {
 		Prototype* that = (Prototype*) param;
 		if (action == EFSW_ADD || action == EFSW_DELETE || action == EFSW_MODIFIED || action == EFSW_MOVED) {
 			// Check filename
@@ -358,7 +358,7 @@ struct Prototype : Module {
 				that->loadPath();
 			}
 		}
-	}
+	}*/
 
 	json_t* dataToJson() override {
 		json_t* rootJ = json_object();
