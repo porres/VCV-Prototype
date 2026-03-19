@@ -1,3 +1,6 @@
+### 2.0.0 (in development)
+- Just libpd (Pure Data) engine.
+
 ### 1.3.0 (in development)
 - Add libpd (Pure Data) engine.
 - Add Vult engine.
