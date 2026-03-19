@@ -109,13 +109,13 @@ std::string getApplicationPathDialog() {
 	return path;
 }
 
-void setEditorDialog() {
+/*void setEditorDialog() {
 	std::string path = getApplicationPathDialog();
 	if (path == "")
 		return;
-	settingsEditorPath = path;
+    settingsPdEditorPath = path;
 	settingsSave();
-}
+}*/
 
 void setPdEditorDialog() {
 	std::string path = getApplicationPathDialog();
@@ -124,7 +124,6 @@ void setPdEditorDialog() {
 	settingsPdEditorPath = path;
 	settingsSave();
 }
-
 
 struct Prototype : Module {
 	enum ParamIds {
@@ -240,7 +239,7 @@ struct Prototype : Module {
 				// Process buffer
 				if (scriptEngine) {
 					if (scriptEngine->process()) {
-						WARN("Script %s process() failed. Stopped script.", path.c_str());
+						WARN("Patch %s process() failed. Stopped script.", path.c_str());
 						delete scriptEngine;
 						scriptEngine = NULL;
 						return;
@@ -312,47 +311,51 @@ struct Prototype : Module {
 			// Fail silently
 		}
 	}
+    
+    void setScript(std::string script) {
+        std::lock_guard<std::mutex> lock(scriptMutex);
+        // Reset script state
+        if (scriptEngine) {
+            delete scriptEngine;
+            scriptEngine = NULL;
+        }
+        this->script = "";
+        this->engineName = "";
+        this->message = "";
+        // Reset process state
+        frameDivider = 32;
+        frame = 0;
+        bufferIndex = 0;
+        // Reset block
+        *block = ProcessBlock();
 
-	void setScript(std::string script) {
-		std::lock_guard<std::mutex> lock(scriptMutex);
-		// Reset script state
-		if (scriptEngine) {
-			delete scriptEngine;
-			scriptEngine = NULL;
-		}
-		this->script = "";
-		this->engineName = "";
-		this->message = "";
-		// Reset process state
-		frameDivider = 32;
-		frame = 0;
-		bufferIndex = 0;
-		// Reset block
-		*block = ProcessBlock();
+        if (script == "")
+            return;
+        this->script = script;
 
-		if (script == "")
-			return;
-		this->script = script;
-
-		// Create script engine from path extension
-//		std::string extension = string::filenameExtension(string::filename(path)); old V1
+        // Create script engine from path extension
         std::string extension = system::getExtension(system::getFilename(path));
-		scriptEngine = createScriptEngine(extension);
-		if (!scriptEngine) {
-			message = string::f("No engine for .%s extension", extension.c_str());
-			return;
-		}
-		scriptEngine->module = this;
+        // Remove the leading dot if it exists
+        if (!extension.empty() && extension[0] == '.') {
+            extension = extension.substr(1);
+        }
+        
+        scriptEngine = createScriptEngine(extension);
+        if (!scriptEngine) {
+            message = string::f("No engine for .%s extension", extension.c_str());
+            return;
+        }
+        scriptEngine->module = this;
 
-		// Run script
-		if (scriptEngine->run(path, script)) {
-			// Error message should have been set by ScriptEngine
-			delete scriptEngine;
-			scriptEngine = NULL;
-			return;
-		}
-		this->engineName = scriptEngine->getEngineName();
-	}
+        // Run script
+        if (scriptEngine->run(path, script)) {
+            // Error message should have been set by ScriptEngine
+            delete scriptEngine;
+            scriptEngine = NULL;
+            return;
+        }
+        this->engineName = scriptEngine->getEngineName();
+    }
 
 /*	static void watchCallback(efsw_watcher watcher, efsw_watchid watchid, const char* dir, const char* filename, enum efsw_action action, const char* old_filename, void* param) {
 		Prototype* that = (Prototype*) param;
@@ -374,7 +377,7 @@ struct Prototype : Module {
 		// If we haven't accepted the security of this script, serialize the security-sandboxed script anyway.
 		if (script == "")
 			script = unsecureScript;
-		json_object_set_new(rootJ, "script", json_stringn(script.data(), script.size()));
+		json_object_set_new(rootJ, "patch", json_stringn(script.data(), script.size()));
 
 		return rootJ;
 	}
@@ -388,8 +391,8 @@ struct Prototype : Module {
 
 		// Only get the script string if the script file wasn't found.
 		if (this->path != "" && this->script == "") {
-			WARN("Script file %s not found, using script in patch", this->path.c_str());
-			json_t* scriptJ = json_object_get(rootJ, "script");
+			WARN("Patch file %s not found, using script in patch", this->path.c_str());
+			json_t* scriptJ = json_object_get(rootJ, "patch");
 			if (scriptJ) {
 				std::string script = std::string(json_string_value(scriptJ), json_string_length(scriptJ));
 				if (script != "") {
@@ -534,7 +537,7 @@ struct Prototype : Module {
 				module->newScriptDialog();
 			}
 		};
-		NewScriptItem* newScriptItem = createMenuItem<NewScriptItem>("New script");
+		NewScriptItem* newScriptItem = createMenuItem<NewScriptItem>("New patch");
 		newScriptItem->module = this;
 		menu->addChild(newScriptItem);
 
@@ -544,7 +547,7 @@ struct Prototype : Module {
 				module->loadScriptDialog();
 			}
 		};
-		LoadScriptItem* loadScriptItem = createMenuItem<LoadScriptItem>("Load script");
+		LoadScriptItem* loadScriptItem = createMenuItem<LoadScriptItem>("Load patch");
 		loadScriptItem->module = this;
 		menu->addChild(loadScriptItem);
 
@@ -554,7 +557,7 @@ struct Prototype : Module {
 				module->reloadScript();
 			}
 		};
-		ReloadScriptItem* reloadScriptItem = createMenuItem<ReloadScriptItem>("Reload script");
+		ReloadScriptItem* reloadScriptItem = createMenuItem<ReloadScriptItem>("Reload patch");
 		reloadScriptItem->module = this;
 		menu->addChild(reloadScriptItem);
 
@@ -564,7 +567,7 @@ struct Prototype : Module {
 				module->saveScriptDialog();
 			}
 		};
-		SaveScriptItem* saveScriptItem = createMenuItem<SaveScriptItem>("Save script as");
+		SaveScriptItem* saveScriptItem = createMenuItem<SaveScriptItem>("Save patch as");
 		saveScriptItem->module = this;
 		menu->addChild(saveScriptItem);
 
@@ -574,7 +577,7 @@ struct Prototype : Module {
 				module->editScript();
 			}
 		};
-		EditScriptItem* editScriptItem = createMenuItem<EditScriptItem>("Edit script");
+		EditScriptItem* editScriptItem = createMenuItem<EditScriptItem>("Edit patch");
 		editScriptItem->module = this;
 
 		editScriptItem->disabled = !doesPathExist() || (getEditorPath() == "");
@@ -582,13 +585,13 @@ struct Prototype : Module {
 
 		menu->addChild(new MenuSeparator);
 
-		struct SetEditorItem : MenuItem {
+/*		struct SetEditorItem : MenuItem {
 			void onAction(const event::Action& e) override {
 				setEditorDialog();
 			}
 		};
 		SetEditorItem* setEditorItem = createMenuItem<SetEditorItem>("Set text editor application");
-		menu->addChild(setEditorItem);
+		menu->addChild(setEditorItem);*/
 
 		struct SetPdEditorItem : MenuItem {
 			void onAction(const event::Action& e) override {
@@ -604,9 +607,9 @@ struct Prototype : Module {
 			return "";
 		// HACK check if extension is .pd
 //		if (string::filenameExtension(string::filename(path)) == "pd")
-        if (system::getExtension(system::getFilename(path)) == "pd")
+//        if (system::getExtension(system::getFilename(path)) == "pd")
 			return settingsPdEditorPath;
-		return settingsEditorPath;
+//		return settingsEditorPath;
 	}
 };
 
@@ -632,7 +635,7 @@ struct FileChoice : LedDisplayChoice {
 		if (module && module->engineName != "")
 			text = module->engineName;
 		else
-			text = "Script";
+			text = "Patch";
 		text += ": ";
         if (module && module->path != ""){
 //			text += string::filename(module->path);
